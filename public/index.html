@@ -161,31 +161,6 @@ function saveLog(t,d) { localStorage.setItem('ai_'+t, JSON.stringify(d)); }
 function isPremium() { return localStorage.getItem('plan')==='premium'; }
 function togglePlan() { localStorage.setItem('plan', isPremium()?'free':'premium'); runBoth(); }
 
-
-// ===== APIからデータ取得（自動更新） =====
-async function fetchFromAPI(type) {
-  try {
-    const res = await fetch('/api/results?type=' + type + '&limit=500');
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.success && json.data && json.data.length > 0) {
-      saveLog(type, json.data);
-      return json.data;
-    }
-    return null;
-  } catch(e) {
-    return null;
-  }
-}
-
-async function loadLogWithAPI(type) {
-  // まずAPIから取得を試みる
-  const apiData = await fetchFromAPI(type);
-  if (apiData) return apiData;
-  // 失敗したらローカルストレージから
-  return loadLog(type);
-}
-
 function showPage(name) {
   document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('on'); });
   document.querySelectorAll('.tab').forEach(function(el){ el.classList.remove('on'); });
@@ -434,10 +409,7 @@ function makeSummary(analysis, isAmber) {
 }
 
 // ===== 予想実行 =====
-async function runBoth() {
-  document.getElementById('body-n3').innerHTML = '<div class="waiting">データ取得中...</div>';
-  document.getElementById('body-n4').innerHTML = '<div class="waiting">データ取得中...</div>';
-  await Promise.all([fetchFromAPI('n3'), fetchFromAPI('n4')]);
+function runBoth() {
   showResult('n3');
   showResult('n4');
 }
