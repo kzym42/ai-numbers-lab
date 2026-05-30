@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI数字研究所</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #020d06; color: #00ff88; font-family: monospace; padding: 16px; min-height: 100vh; }
+h1 { font-size: 24px; margin-bottom: 4px; }
+h1 span { color: #ffaa00; }
+.sub { font-size: 11px; color: #336644; letter-spacing: 2px; margin-bottom: 20px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+.tab { padding: 8px 14px; background: transparent; border: 1px solid #336644; color: #336644; cursor: pointer; font-family: monospace; font-size: 12px; }
+.tab.on { border-color: #00ff88; color: #00ff88; }
+.page { display: none; }
+.page.on { display: block; }
+.box { border: 1px solid #1a4433; padding: 16px; margin-bottom: 14px; }
+.box.amber { border-color: #443311; }
+.lbl { font-size: 11px; color: #336644; letter-spacing: 2px; margin-bottom: 10px; }
+.btn { display: inline-block; padding: 12px 24px; background: transparent; border: 1px solid #00ff88; color: #00ff88; cursor: pointer; font-family: monospace; font-size: 13px; }
+.btn:hover { background: rgba(0,255,136,0.08); }
+.btn.amber { border-color: #ffaa00; color: #ffaa00; }
+.btn.amber:hover { background: rgba(255,170,0,0.08); }
+.btn.big { width: 100%; padding: 18px; font-size: 15px; text-align: center; display: block; margin-bottom: 16px; letter-spacing: 2px; }
+.predict-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media(max-width:560px) { .predict-wrap { grid-template-columns: 1fr; } }
+.predict-panel { border: 1px solid #1a4433; }
+.predict-panel.amber { border-color: #443311; }
+.predict-head { padding: 10px 14px; border-bottom: 1px solid #1a4433; display: flex; justify-content: space-between; align-items: center; }
+.predict-panel.amber .predict-head { border-bottom-color: #443311; }
+.predict-title { font-size: 12px; letter-spacing: 2px; color: #00cc66; }
+.predict-panel.amber .predict-title { color: #cc8800; }
+.predict-badge { font-size: 10px; border: 1px solid #336644; color: #336644; padding: 2px 8px; }
+.predict-body { padding: 14px; }
+.num-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.num-chip { padding: 7px 14px; border: 1px solid #00ff88; color: #00ff88; font-size: 16px; font-weight: bold; letter-spacing: 4px; background: rgba(0,255,136,0.05); font-family: monospace; }
+.num-chip.amber { border-color: #ffaa00; color: #ffaa00; background: rgba(255,170,0,0.05); }
+.num-chip.top { box-shadow: 0 0 10px rgba(0,255,136,0.4); border-width: 2px; }
+.num-chip.amber.top { box-shadow: 0 0 10px rgba(255,170,0,0.4); }
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+@media(max-width:400px) { .analysis-grid { grid-template-columns: 1fr; } }
+.analysis-item { border: 1px solid #0a2818; padding: 8px 10px; font-size: 11px; }
+.analysis-item .title { color: #336644; letter-spacing: 1px; margin-bottom: 4px; font-size: 10px; }
+.analysis-item .value { color: #00ff88; font-size: 13px; }
+.analysis-item.amber .value { color: #ffaa00; }
+.shrink-row { font-size: 12px; color: #336644; padding-top: 10px; border-top: 1px solid #0a1f14; margin-top: 8px; }
+.shrink-row strong { color: #00ff88; font-size: 15px; }
+.predict-panel.amber .shrink-row strong { color: #ffaa00; }
+.plan-note { font-size: 11px; color: #886633; margin-top: 8px; cursor: pointer; }
+.plan-note:hover { color: #ffaa00; }
+.input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+input[type=text] { flex: 1; background: #020d06; border: 1px solid #1a4433; color: #00ff88; font-family: monospace; font-size: 20px; letter-spacing: 6px; text-align: center; padding: 10px; outline: none; }
+input[type=text].amber { color: #ffaa00; }
+input[type=text]:focus { border-color: #00ff88; }
+input[type=text].amber:focus { border-color: #ffaa00; }
+input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #336644; font-family: monospace; font-size: 11px; padding: 8px; width: 100%; cursor: pointer; margin-bottom: 8px; }
+.log-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #0a1f14; font-size: 12px; }
+.log-num { font-size: 16px; letter-spacing: 4px; font-weight: bold; }
+.log-num.green { color: #00ff88; }
+.log-num.amber { color: #ffaa00; }
+.log-date { color: #336644; font-size: 11px; }
+.hit-badge { padding: 2px 8px; font-size: 10px; margin-left: auto; }
+.hit-badge.hit { border: 1px solid #00ff88; color: #00ff88; }
+.hit-badge.miss { border: 1px solid #1a3322; color: #1a3322; }
+.fb { font-size: 11px; min-height: 16px; margin-top: 6px; }
+.waiting { font-size: 12px; color: #336644; padding: 10px 0; }
+.note { font-size: 11px; color: #336644; line-height: 1.8; margin-top: 16px; padding-top: 12px; border-top: 1px solid #0a1f14; }
+.score-bar-wrap { background: #0a1f14; height: 4px; margin-top: 3px; }
+.score-bar { height: 4px; background: #00ff88; }
+.score-bar.amber { background: #ffaa00; }
+</style>
+</head>
+<body>
+<h1>AI数字<span>研究所</span></h1>
+<div class="sub">NUMBERS3・4  統計AI分析 — 7項目複合分析エンジン</div>
+
+<div class="tabs">
+  <button class="tab on" id="tab-btn-predict" onclick="showPage('predict')">🔮 TODAY予想</button>
+  <button class="tab" id="tab-btn-n3log" onclick="showPage('n3log')">📋 N3ログ</button>
+  <button class="tab" id="tab-btn-n4log" onclick="showPage('n4log')">📋 N4ログ</button>
+</div>
+
+<div class="page on" id="page-predict">
+  <button class="btn big" onclick="runBoth()">✦ 今日の予想を出す</button>
+  <div class="predict-wrap">
+    <div class="predict-panel" id="panel-n3">
+      <div class="predict-head">
+        <div class="predict-title">NUMBERS 3</div>
+        <div class="predict-badge" id="badge-n3">FREE</div>
+      </div>
+      <div class="predict-body" id="body-n3">
+        <div class="waiting">ボタンを押してください</div>
+      </div>
+    </div>
+    <div class="predict-panel amber">
+      <div class="predict-head">
+        <div class="predict-title">NUMBERS 4</div>
+        <div class="predict-badge" id="badge-n4">FREE</div>
+      </div>
+      <div class="predict-body" id="body-n4">
+        <div class="waiting">ボタンを押してください</div>
+      </div>
+    </div>
+  </div>
+  <div class="note">※ 7項目の統計複合分析による候補提示です。当選を保証するものではありません。外れた予想もすべて公開します。</div>
+</div>
+
+<div class="page" id="page-n3log">
+  <div class="box">
+    <div class="lbl">N3 CSV取込（loto-life.net）</div>
+    <input type="file" id="n3-file" accept=".csv">
+    <button class="btn" onclick="importCSV('n3')">▶ 取込開始</button>
+    <div class="fb" id="n3-import-fb" style="color:#00ff88"></div>
+  </div>
+  <div class="box">
+    <div class="lbl">当選番号を手動登録（3桁）</div>
+    <div class="input-row">
+      <input type="text" id="n3-input" maxlength="3" placeholder="000">
+      <button class="btn" onclick="addEntry('n3')">登録</button>
+    </div>
+    <label style="font-size:11px;color:#336644;display:flex;align-items:center;gap:6px;cursor:pointer">
+      <input type="checkbox" id="n3-hit"> 予想に含まれていた
+    </label>
+    <div class="fb" id="n3-entry-fb" style="color:#00ff88"></div>
+  </div>
+  <div class="box">
+    <div class="lbl" id="n3-log-lbl">過去ログ（0件）</div>
+    <div id="n3-log-list"><div class="waiting">記録がありません</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-n4log">
+  <div class="box amber">
+    <div class="lbl">N4 CSV取込（loto-life.net）</div>
+    <input type="file" id="n4-file" accept=".csv">
+    <button class="btn amber" onclick="importCSV('n4')">▶ 取込開始</button>
+    <div class="fb" id="n4-import-fb" style="color:#ffaa00"></div>
+  </div>
+  <div class="box amber">
+    <div class="lbl">当選番号を手動登録（4桁）</div>
+    <div class="input-row">
+      <input type="text" class="amber" id="n4-input" maxlength="4" placeholder="0000">
+      <button class="btn amber" onclick="addEntry('n4')">登録</button>
+    </div>
+    <label style="font-size:11px;color:#443311;display:flex;align-items:center;gap:6px;cursor:pointer">
+      <input type="checkbox" id="n4-hit"> 予想に含まれていた
+    </label>
+    <div class="fb" id="n4-entry-fb" style="color:#ffaa00"></div>
+  </div>
+  <div class="box amber">
+    <div class="lbl" id="n4-log-lbl">過去ログ（0件）</div>
+    <div id="n4-log-list"><div class="waiting">記録がありません</div></div>
+  </div>
+</div>
+
+<script>
+// ===== ストレージ =====
+function loadLog(t) { try { return JSON.parse(localStorage.getItem('ai_'+t))||[]; } catch(e) { return []; } }
+function saveLog(t,d) { localStorage.setItem('ai_'+t, JSON.stringify(d)); }
+function isPremium() { return localStorage.getItem('plan')==='premium'; }
+function togglePlan() { localStorage.setItem('plan', isPremium()?'free':'premium'); runBoth(); }
+
+
+// ===== APIからデータ取得（自動更新） =====
+async function fetchFromAPI(type) {
+  try {
+    const res = await fetch('/api/results?type=' + type + '&limit=500');
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success && json.data && json.data.length > 0) {
+      saveLog(type, json.data);
+      return json.data;
+    }
+    return null;
+  } catch(e) {
+    return null;
+  }
+}
+
+async function loadLogWithAPI(type) {
+  // まずAPIから取得を試みる
+  const apiData = await fetchFromAPI(type);
+  if (apiData) return apiData;
+  // 失敗したらローカルストレージから
+  return loadLog(type);
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('on'); });
+  document.querySelectorAll('.tab').forEach(function(el){ el.classList.remove('on'); });
+  document.getElementById('page-'+name).classList.add('on');
+  document.getElementById('tab-btn-'+name).classList.add('on');
+  if(name==='n3log') renderLog('n3');
+  if(name==='n4log') renderLog('n4');
+}
+
+// ===== 風車盤配列（実際の配列） =====
+// N3: 百=0987654321, 十=0369258147, 一=0123456789
+// N4: 千=0123456789, 百=0987654321, 十=0369258147, 一=0123456789
+var WINDMILL_N3 = [
+  [0,9,8,7,6,5,4,3,2,1],
+  [0,3,6,9,2,5,8,1,4,7],
+  [0,1,2,3,4,5,6,7,8,9]
+];
+var WINDMILL_N4 = [
+  [0,1,2,3,4,5,6,7,8,9],
+  [0,9,8,7,6,5,4,3,2,1],
+  [0,3,6,9,2,5,8,1,4,7],
+  [0,1,2,3,4,5,6,7,8,9]
+];
+
+// 裏数字（対角=差が5）
+function getUra(d) { return (d + 5) % 10; }
+
+// 風車盤で隣の数字（+1/-1ずらし）
+function getNeighbors(windmill, pos, d) {
+  var arr = windmill[pos];
+  var idx = arr.indexOf(d);
+  var result = [];
+  if(idx > 0) result.push(arr[idx-1]);
+  if(idx < arr.length-1) result.push(arr[idx+1]);
+  return result;
+}
+
+// ===== 7項目複合分析エンジン =====
+function fullAnalyze(log, digits) {
+  if(log.length < 5) return null;
+  var windmill = digits === 3 ? WINDMILL_N3 : WINDMILL_N4;
+  var n = log.length;
+  var recent10 = log.slice(0, Math.min(10, n));
+  var recent30 = log.slice(0, Math.min(30, n));
+  var recent5 = log.slice(0, Math.min(5, n));
+  var today = new Date();
+  var dow = today.getDay(); // 0=日,1=月...6=土
+
+  // 桁ごとのスコア配列
+  var posScores = [];
+  for(var pos = 0; pos < digits; pos++) {
+    var scores = {};
+    for(var d = 0; d < 10; d++) scores[d] = 0;
+
+    // ① 桁別出現頻度（全期間）
+    var freq = {};
+    for(var d=0;d<10;d++) freq[d]=0;
+    for(var i=0;i<n;i++) freq[log[i].ds[pos]]++;
+    var maxFreq = Math.max.apply(null, Object.values(freq));
+    for(var d=0;d<10;d++) scores[d] += (freq[d]/maxFreq) * 10;
+
+    // ② コールド分析（最後に出てから何回経過）
+    var lastSeen = {};
+    for(var d=0;d<10;d++) lastSeen[d] = n;
+    for(var i=0;i<n;i++) {
+      var dd = log[i].ds[pos];
+      if(lastSeen[dd] === n) lastSeen[dd] = i;
+    }
+    var maxCold = Math.max.apply(null, Object.values(lastSeen));
+    for(var d=0;d<10;d++) scores[d] += (lastSeen[d]/maxCold) * 15;
+
+    // ③ ホット分析（直近10回）
+    var hotFreq = {};
+    for(var d=0;d<10;d++) hotFreq[d]=0;
+    for(var i=0;i<recent10.length;i++) hotFreq[recent10[i].ds[pos]]++;
+    var maxHot = Math.max.apply(null, Object.values(hotFreq));
+    if(maxHot > 0) for(var d=0;d<10;d++) scores[d] += (hotFreq[d]/maxHot) * 12;
+
+    // ④ 曜日別頻度
+    var dowFreq = {};
+    for(var d=0;d<10;d++) dowFreq[d]=0;
+    var dowCount = 0;
+    for(var i=0;i<n;i++) {
+      var parts = log[i].date.split('/');
+      if(parts.length >= 3) {
+        var dt = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+        if(dt.getDay() === dow) { dowFreq[log[i].ds[pos]]++; dowCount++; }
+      }
+    }
+    if(dowCount > 0) {
+      var maxDow = Math.max.apply(null, Object.values(dowFreq));
+      if(maxDow > 0) for(var d=0;d<10;d++) scores[d] += (dowFreq[d]/maxDow) * 8;
+    }
+
+    // ⑤ 裏数字（前回当選の裏数字にボーナス）
+    if(log.length > 0) {
+      var prevD = log[0].ds[pos];
+      var ura = getUra(prevD);
+      scores[ura] += 10;
+    }
+
+    // ⑥ 風車盤隣接数字（前回当選の隣接数字にボーナス）
+    if(log.length > 0) {
+      var prevD2 = log[0].ds[pos];
+      var neighbors = getNeighbors(windmill, pos, prevD2);
+      for(var ni=0;ni<neighbors.length;ni++) scores[neighbors[ni]] += 6;
+    }
+
+    // ⑦ 直近5回除外（出た数字のスコアを下げる）
+    var recent5digits = {};
+    for(var i=0;i<recent5.length;i++) recent5digits[recent5[i].ds[pos]] = true;
+    for(var d=0;d<10;d++) {
+      if(recent5digits[d]) scores[d] -= 8;
+    }
+
+    // スコアをソート
+    var sorted = [];
+    for(var d=0;d<10;d++) sorted.push({d:d, s:scores[d]});
+    sorted.sort(function(a,b){ return b.s - a.s; });
+    posScores.push(sorted);
+  }
+
+  // 合計値フィルター（直近30回の合計値トレンド）
+  var sumFreq = {};
+  for(var i=0;i<recent30.length;i++) {
+    var s = recent30[i].total;
+    sumFreq[s] = (sumFreq[s]||0) + 1;
+  }
+  var maxSum = digits === 3 ? 27 : 36;
+  // 合計値の平均・最頻値
+  var sumTotal = 0;
+  for(var i=0;i<recent30.length;i++) sumTotal += recent30[i].total;
+  var avgSum = sumTotal / recent30.length;
+
+  // 奇偶パターン（偶奇混合を優先）
+  // N3: 偶奇混合が約72%以上 → 全部偶数・全部奇数は低スコア
+  var prevNum = log.length > 0 ? log[0].number : null;
+  var prevTotal = log.length > 0 ? log[0].total : null;
+
+  return {
+    posScores: posScores,
+    avgSum: avgSum,
+    maxSum: maxSum,
+    prevNum: prevNum,
+    prevTotal: prevTotal,
+    digits: digits,
+    n: n
+  };
+}
+
+// ===== 組み合わせ生成（複合スコア） =====
+function generateCombos(analysis, count) {
+  var posScores = analysis.posScores;
+  var digits = analysis.digits;
+  var avgSum = analysis.avgSum;
+  var combos = [];
+
+  // 各桁Top4で組み合わせ生成
+  var top = 4;
+  function gen(pos, current, score) {
+    if(pos === digits) {
+      var num = current.join('');
+      var total = 0;
+      for(var i=0;i<current.length;i++) total += current[i];
+
+      // 合計値ボーナス（平均値±4に近いほど高スコア）
+      var sumDiff = Math.abs(total - avgSum);
+      var sumBonus = Math.max(0, 10 - sumDiff * 1.5);
+      score += sumBonus;
+
+      // 奇偶パターンボーナス（混合を優先）
+      var evenCount = 0, oddCount = 0;
+      for(var i=0;i<current.length;i++) {
+        if(current[i] % 2 === 0) evenCount++; else oddCount++;
+      }
+      if(evenCount > 0 && oddCount > 0) score += 8; // 混合ボーナス
+      if(evenCount === digits || oddCount === digits) score -= 5; // 全偶/全奇ペナルティ
+
+      combos.push({num: num, score: score, total: total});
+      return;
+    }
+    var tops = posScores[pos].slice(0, top);
+    for(var i=0;i<tops.length;i++) {
+      gen(pos+1, current.concat([tops[i].d]), score + tops[i].s);
+    }
+  }
+  gen(0, [], 0);
+
+  combos.sort(function(a,b){ return b.score - a.score; });
+  var seen = {}, result = [];
+  for(var i=0;i<combos.length && result.length < count; i++) {
+    if(!seen[combos[i].num]) {
+      seen[combos[i].num] = true;
+      result.push(combos[i]);
+    }
+  }
+  return result;
+}
+
+// ===== 分析サマリー生成 =====
+function makeSummary(analysis, isAmber) {
+  var cls = isAmber ? ' amber' : '';
+  var hl = isAmber ? '#ffaa00' : '#00ff88';
+  var digits = analysis.digits;
+  var posNames3 = ['百','十','一'];
+  var posNames4 = ['千','百','十','一'];
+  var posNames = digits === 3 ? posNames3 : posNames4;
+
+  var items = [];
+
+  // 各桁のTop1
+  for(var pos=0;pos<digits;pos++) {
+    var top = analysis.posScores[pos][0];
+    items.push({
+      title: posNames[pos]+'の位 注目数字',
+      value: '<span style="color:'+hl+';font-size:18px;font-weight:bold">'+top.d+'</span>'
+    });
+  }
+
+  // 合計値トレンド
+  var zone = analysis.avgSum < 10 ? '低め(0〜9)' : analysis.avgSum < 18 ? '中央(10〜17)' : '高め(18〜27)';
+  items.push({
+    title: '合計値トレンド',
+    value: Math.round(analysis.avgSum) + '前後（'+zone+'）'
+  });
+
+  // 裏数字
+  if(analysis.prevNum) {
+    var uras = [];
+    for(var i=0;i<digits;i++) {
+      var d = parseInt(analysis.prevNum[i]);
+      uras.push(getUra(d));
+    }
+    items.push({
+      title: '前回裏数字',
+      value: uras.join('-')
+    });
+  }
+
+  var html = '<div class="analysis-grid">';
+  for(var i=0;i<items.length;i++) {
+    html += '<div class="analysis-item'+cls+'"><div class="title">'+items[i].title+'</div><div class="value">'+items[i].value+'</div></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ===== 予想実行 =====
+async function runBoth() {
+  document.getElementById('body-n3').innerHTML = '<div class="waiting">データ取得中...</div>';
+  document.getElementById('body-n4').innerHTML = '<div class="waiting">データ取得中...</div>';
+  await Promise.all([fetchFromAPI('n3'), fetchFromAPI('n4')]);
+  showResult('n3');
+  showResult('n4');
+}
+
+function showResult(type) {
+  var bodyEl = document.getElementById('body-'+type);
+  var badgeEl = document.getElementById('badge-'+type);
+  var log = loadLog(type);
+  var digits = type === 'n3' ? 3 : 4;
+  var isAmber = type === 'n4';
+  var prem = isPremium();
+
+  if(log.length < 5) {
+    bodyEl.innerHTML = '<div class="waiting">CSVを取込んでください（現在'+log.length+'件）</div>';
+    return;
+  }
+
+  bodyEl.innerHTML = '<div class="waiting">7項目分析中...</div>';
+
+  setTimeout(function() {
+    var analysis = fullAnalyze(log, digits);
+    if(!analysis) { bodyEl.innerHTML='<div class="waiting">データ不足</div>'; return; }
+
+    var allCombos = generateCombos(analysis, 20);
+    var showCombos = prem ? allCombos.slice(0,10) : allCombos;
+
+    // チップ表示
+    var chipsHtml = '<div class="num-grid">';
+    for(var i=0;i<showCombos.length;i++) {
+      var cls = 'num-chip'+(isAmber?' amber':'')+(i<5?' top':'');
+      chipsHtml += '<div class="'+cls+'">'+showCombos[i].num+'</div>';
+    }
+    chipsHtml += '</div>';
+
+    // 分析サマリー
+    var summaryHtml = makeSummary(analysis, isAmber);
+
+    // 分析項目バッジ
+    var badgesHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
+    var items7 = ['①桁別頻度','②コールド','③ホット','④曜日別','⑤裏数字','⑥風車隣接','⑦直近除外'];
+    for(var i=0;i<items7.length;i++) {
+      badgesHtml += '<span style="font-size:10px;border:1px solid #1a4433;color:#336644;padding:2px 6px">'+items7[i]+'</span>';
+    }
+    badgesHtml += '</div>';
+
+    // 絞込情報
+    var total = type==='n3' ? 1000 : 10000;
+    var shrinkHtml = '<div class="shrink-row">'+total.toLocaleString()+'通り → <strong>'+showCombos.length+'</strong>通りに絞込</div>';
+
+    // プランノート
+    var noteHtml = '<div class="plan-note" onclick="togglePlan()">'+(prem?'🔓 有料プラン中（タップで無料に戻す）':'🔒 有料プランで上位10通りに絞込（タップで切替テスト）')+'</div>';
+
+    bodyEl.innerHTML = badgesHtml + chipsHtml + summaryHtml + shrinkHtml + noteHtml;
+    badgeEl.textContent = (prem?'PRO / ':'FREE / ')+showCombos.length+'通り';
+  }, 800);
+}
+
+// ===== CSV取込 =====
+function importCSV(type) {
+  var fileEl = document.getElementById(type+'-file');
+  var fb = document.getElementById(type+'-import-fb');
+  if(!fileEl.files||fileEl.files.length===0){ fb.textContent='⚠ ファイルを選択してください'; return; }
+  fb.textContent='読み込み中...';
+  var digits = type==='n3'?3:4;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var text = new TextDecoder('shift-jis').decode(e.target.result);
+      var lines = text.split('\n');
+      var data=[], skipped=0;
+      for(var i=1;i<lines.length;i++) {
+        var line=lines[i].trim(); if(!line) continue;
+        var cols=line.split(','); if(cols.length<3) continue;
+        var dateStr=cols[1].replace(/"/g,'').trim();
+        var raw=cols[2].replace(/"/g,'').replace(/=/g,'').trim();
+        var num='';
+        for(var j=0;j<raw.length;j++) if(raw[j]>='0'&&raw[j]<='9') num+=raw[j];
+        while(num.length<digits) num='0'+num;
+        num=num.slice(0,digits);
+        if(num.length!==digits){skipped++;continue;}
+        var ds=[],tot=0;
+        for(var j=0;j<digits;j++){var d=parseInt(num[j]);ds.push(d);tot+=d;}
+        data.push({date:dateStr,number:num,ds:ds,total:tot,hit:false});
+      }
+      if(data.length===0){fb.textContent='❌ データを読み込めませんでした';return;}
+      saveLog(type,data);
+      fb.textContent='✅ '+data.length.toLocaleString()+'件 取込完了';
+      renderLog(type);
+    } catch(err){fb.textContent='❌ エラー: '+err.message;}
+  };
+  reader.readAsArrayBuffer(fileEl.files[0]);
+}
+
+// ===== 手動登録 =====
+function addEntry(type) {
+  var digits=type==='n3'?3:4;
+  var inputEl=document.getElementById(type+'-input');
+  var hitEl=document.getElementById(type+'-hit');
+  var fb=document.getElementById(type+'-entry-fb');
+  var val=inputEl.value.trim();
+  while(val.length<digits) val='0'+val;
+  val=val.slice(0,digits);
+  var ok=val.length===digits;
+  for(var i=0;i<val.length;i++) if(val[i]<'0'||val[i]>'9') ok=false;
+  if(!ok){fb.textContent='⚠ '+digits+'桁の数字を入力してください';return;}
+  var ds=[],tot=0;
+  for(var i=0;i<digits;i++){var d=parseInt(val[i]);ds.push(d);tot+=d;}
+  var now=new Date();
+  var entry={date:now.toLocaleDateString('ja-JP'),number:val,ds:ds,total:tot,hit:hitEl.checked};
+  var log=loadLog(type);
+  log.unshift(entry);
+  saveLog(type,log);
+  inputEl.value='';hitEl.checked=false;
+  fb.textContent='✅ '+val+' 登録しました';
+  setTimeout(function(){fb.textContent='';},3000);
+  renderLog(type);
+}
+
+// ===== ログ描画 =====
+function renderLog(type) {
+  var log=loadLog(type);
+  var listEl=document.getElementById(type+'-log-list');
+  var lblEl=document.getElementById(type+'-log-lbl');
+  var isAmber=type==='n4';
+  lblEl.textContent='過去ログ（'+log.length+'件）';
+  if(log.length===0){listEl.innerHTML='<div class="waiting">記録がありません</div>';return;}
+  var html='';
+  var show=log.slice(0,30);
+  for(var i=0;i<show.length;i++){
+    var e=show[i];
+    html+='<div class="log-item">';
+    html+='<span class="log-date">'+e.date+'</span>';
+    html+='<span class="log-num '+(isAmber?'amber':'green')+'">'+e.number+'</span>';
+    html+='<span style="color:#336644;font-size:11px">計'+e.total+'</span>';
+    html+='<span class="hit-badge '+(e.hit?'hit':'miss')+'">'+(e.hit?'HIT':'—')+'</span>';
+    html+='</div>';
+  }
+  listEl.innerHTML=html;
+}
+
+window.onload=function(){renderLog('n3');renderLog('n4');};
+</script>
+</body>
+</html>
