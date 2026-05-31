@@ -96,7 +96,17 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
     <button onclick="hideLoginForm()" style="padding:10px 14px;background:transparent;border:1px solid #1a3322;color:#336644;font-family:monospace;font-size:12px;cursor:pointer;">閉じる</button>
   </div>
   <div id="authMsg" style="font-size:11px;margin-top:8px;min-height:16px;color:#ffaa00"></div>
+  <div style="margin-top:10px"><span onclick="doForgotPassword()" style="font-size:11px;color:#336644;cursor:pointer;text-decoration:underline">パスワードを忘れた方はこちら</span></div>
 </div>
+
+<!-- パスワード再設定フォーム（メールのリンクから戻ってきた時に表示） -->
+<div id="resetForm" style="display:none;border:1px solid rgba(0,255,136,0.2);padding:20px;margin-bottom:14px;background:rgba(0,20,10,0.8)">
+  <div style="font-size:12px;color:#00ff88;letter-spacing:2px;margin-bottom:12px">新しいパスワードの設定</div>
+  <input type="password" id="newPasswordInput" placeholder="新しいパスワード（6文字以上）" style="width:100%;background:#020d06;border:1px solid rgba(0,255,136,0.2);color:#00ff88;font-family:monospace;font-size:14px;padding:10px;outline:none;margin-bottom:10px;">
+  <button onclick="doUpdatePassword()" style="width:100%;padding:10px;background:transparent;border:1px solid #00ff88;color:#00ff88;font-family:monospace;font-size:12px;cursor:pointer;">パスワードを保存</button>
+  <div id="resetMsg" style="font-size:11px;margin-top:8px;min-height:16px;color:#ffaa00"></div>
+</div>
+
 <div class="tabs">
   <button class="tab on" id="tab-btn-predict" onclick="showPage('predict')">🔮 TODAY予想</button>
   <button class="tab" id="tab-btn-n3log" onclick="showPage('n3log')">📋 N3ログ</button>
@@ -193,6 +203,45 @@ function getSupabaseClient() {
 function showLoginForm() { document.getElementById('loginForm').style.display='block'; }
 function hideLoginForm() { document.getElementById('loginForm').style.display='none'; }
 
+// パスワードを忘れた → 再設定メールを送る
+async function doForgotPassword() {
+  var email = document.getElementById('emailInput').value.trim();
+  var msg = document.getElementById('authMsg');
+  if (!email) { msg.style.color='#ffaa00'; msg.textContent='先にメールアドレスを入力してください'; return; }
+  msg.style.color='#336644';
+  msg.textContent='送信中...';
+  try {
+    var sb = getSupabaseClient();
+    var result = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://ai-numbers-lab.vercel.app/' });
+    if (result.error) { msg.style.color='#ffaa00'; msg.textContent='エラー: ' + result.error.message; return; }
+    msg.style.color='#00ff88';
+    msg.textContent='再設定メールを送信しました。メール内のリンクから新しいパスワードを設定してください。';
+  } catch(e) { msg.style.color='#ffaa00'; msg.textContent='エラー: ' + e.message; }
+}
+
+// メールのリンクから戻ってきた時：新パスワード入力欄を表示
+function showResetForm() {
+  document.getElementById('loginForm').style.display='none';
+  document.getElementById('resetForm').style.display='block';
+}
+
+// 新しいパスワードを保存
+async function doUpdatePassword() {
+  var pw = document.getElementById('newPasswordInput').value;
+  var msg = document.getElementById('resetMsg');
+  if (!pw || pw.length < 6) { msg.style.color='#ffaa00'; msg.textContent='パスワードは6文字以上にしてください'; return; }
+  msg.style.color='#336644';
+  msg.textContent='保存中...';
+  try {
+    var sb = getSupabaseClient();
+    var result = await sb.auth.updateUser({ password: pw });
+    if (result.error) { msg.style.color='#ffaa00'; msg.textContent='エラー: ' + result.error.message; return; }
+    msg.style.color='#00ff88';
+    msg.textContent='パスワードを変更しました。新しいパスワードでログインできます。';
+    setTimeout(function(){ document.getElementById('resetForm').style.display='none'; }, 2500);
+  } catch(e) { msg.style.color='#ffaa00'; msg.textContent='エラー: ' + e.message; }
+}
+
 async function doLogin() {
   var email = document.getElementById('emailInput').value.trim();
   var password = document.getElementById('passwordInput').value;
@@ -269,6 +318,9 @@ function updateAuthUI(email) {
 async function initAuth() {
   try {
     var sb = getSupabaseClient();
+    sb.auth.onAuthStateChange(function(event, session) {
+      if (event === 'PASSWORD_RECOVERY') { showResetForm(); }
+    });
     var session = await sb.auth.getSession();
     if (session.data && session.data.session && session.data.session.user) {
       var email = session.data.session.user.email;
