@@ -158,8 +158,8 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
 // ===== ストレージ =====
 function loadLog(t) { try { return JSON.parse(localStorage.getItem('ai_'+t))||[]; } catch(e) { return []; } }
 function saveLog(t,d) { localStorage.setItem('ai_'+t, JSON.stringify(d)); }
-function isPremium() { return localStorage.getItem('plan')==='premium'; }
-function togglePlan() { localStorage.setItem('plan', isPremium()?'free':'premium'); runBoth(); }
+function isPremium() { return false; }
+function togglePlan() { }
 
 
 // ===== APIからデータ取得（自動更新） =====
@@ -488,7 +488,7 @@ function showResult(type) {
     var shrinkHtml = '<div class="shrink-row">'+total.toLocaleString()+'通り → <strong>'+showCombos.length+'</strong>通りに絞込</div>';
 
     // プランノート
-    var noteHtml = '<div class="plan-note" onclick="togglePlan()">'+(prem?'🔓 有料プラン中（タップで無料に戻す）':'🔒 有料プランで上位10通りに絞込（タップで切替テスト）')+'</div>';
+    var noteHtml = '<div class="plan-note" style="cursor:default">🔒 有料プランで上位10通りに絞込（近日公開）</div>';
 
     bodyEl.innerHTML = badgesHtml + chipsHtml + summaryHtml + shrinkHtml + noteHtml;
     badgeEl.textContent = (prem?'PRO / ':'FREE / ')+showCombos.length+'通り';
