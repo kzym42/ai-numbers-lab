@@ -181,7 +181,7 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
 var _supabaseClient = null;
 function getSupabaseClient() {
   if (!_supabaseClient) {
-    _supabaseClient = supabase.createClient(
+    _supabaseClient = window.supabase.createClient(
       'https://lxxkevwbvniiysyezfoh.supabase.co',
       'sb_publishable_EQtlO-IcObHQHmSv6cMfNQ_uwLE-lZT'
     );
