@@ -156,6 +156,7 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
 
 <script>
 // ===== ストレージ =====
+var STRIPE_LINK = 'https://buy.stripe.com/test_3cI7sN2AEabz6qR1BD7Re00';
 function loadLog(t) { try { return JSON.parse(localStorage.getItem('ai_'+t))||[]; } catch(e) { return []; } }
 function saveLog(t,d) { localStorage.setItem('ai_'+t, JSON.stringify(d)); }
 function isPremium() { return false; }
@@ -488,7 +489,7 @@ function showResult(type) {
     var shrinkHtml = '<div class="shrink-row">'+total.toLocaleString()+'通り → <strong>'+showCombos.length+'</strong>通りに絞込</div>';
 
     // プランノート
-    var noteHtml = '<div class="plan-note" style="cursor:default">🔒 有料プランで上位10通りに絞込（近日公開）</div>';
+    var noteHtml = '<div class="plan-note" onclick="window.open(STRIPE_LINK,\'_blank\')" style="cursor:pointer">🔒 月額980円で上位10通りに絞込 → 申し込む</div>';
 
     bodyEl.innerHTML = badgesHtml + chipsHtml + summaryHtml + shrinkHtml + noteHtml;
     badgeEl.textContent = (prem?'PRO / ':'FREE / ')+showCombos.length+'通り';
