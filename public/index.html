@@ -281,7 +281,7 @@ async function initAuth() {
 var STRIPE_LINK = 'https://buy.stripe.com/9B63cwcfI9azbGOdER5wI01';
 function loadLog(t) { try { return JSON.parse(localStorage.getItem('ai_'+t))||[]; } catch(e) { return []; } }
 function saveLog(t,d) { localStorage.setItem('ai_'+t, JSON.stringify(d)); }
-function isPremium() { return false; }
+function isPremium() { return localStorage.getItem('plan') === 'premium'; }
 function togglePlan() { }
 
 
@@ -585,12 +585,23 @@ function showResult(type) {
     if(!analysis) { bodyEl.innerHTML='<div class="waiting">データ不足</div>'; return; }
 
     var allCombos = generateCombos(analysis, 20);
-    var showCombos = prem ? allCombos.slice(0,10) : allCombos;
+    var showCombos;
+    if(prem) {
+      // 有料：AI分析スコア上位10通り（スコアの高い順）
+      showCombos = allCombos.slice(0,10);
+    } else {
+      // 無料：20通りすべて。抽選はランダムで全候補が等価なので順不同で表示（順位の誤認を防ぐ）
+      showCombos = allCombos.slice();
+      for(var s=showCombos.length-1;s>0;s--) {
+        var r=Math.floor(Math.random()*(s+1));
+        var tmp=showCombos[s]; showCombos[s]=showCombos[r]; showCombos[r]=tmp;
+      }
+    }
 
-    // チップ表示
+    // チップ表示（特定の数字は強調しない＝抽選はランダムで全候補が等価）
     var chipsHtml = '<div class="num-grid">';
     for(var i=0;i<showCombos.length;i++) {
-      var cls = 'num-chip'+(isAmber?' amber':'')+(i<5?' top':'');
+      var cls = 'num-chip'+(isAmber?' amber':'');
       chipsHtml += '<div class="'+cls+'">'+showCombos[i].num+'</div>';
     }
     chipsHtml += '</div>';
@@ -610,8 +621,8 @@ function showResult(type) {
     var total = type==='n3' ? 1000 : 10000;
     var shrinkHtml = '<div class="shrink-row">'+total.toLocaleString()+'通り → <strong>'+showCombos.length+'</strong>通りに絞込</div>';
 
-    // プランノート
-    var noteHtml = '<div class="plan-note" onclick="window.open(STRIPE_LINK,\'_blank\')" style="cursor:pointer">🔒 月額980円で上位10通りに絞込 → 申し込む</div>';
+    // プランノート（無料ユーザーにのみ表示）
+    var noteHtml = prem ? '' : '<div class="plan-note" onclick="window.open(STRIPE_LINK,\'_blank\')" style="cursor:pointer">🔒 月額980円：AI分析スコア上位10通りに絞込 → 申し込む</div>';
 
     bodyEl.innerHTML = badgesHtml + chipsHtml + summaryHtml + shrinkHtml + noteHtml;
     badgeEl.textContent = (prem?'PRO / ':'FREE / ')+showCombos.length+'通り';
