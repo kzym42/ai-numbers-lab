@@ -75,6 +75,27 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
 <h1>AI数字<span>研究所</span></h1>
 <div class="sub">NUMBERS3・4  統計AI分析 — 7項目複合分析エンジン</div>
 
+
+<!-- ログインバー -->
+<div id="authBar" style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+  <div id="authStatus" style="font-size:12px;color:#336644">ログインすると有料プランを利用できます</div>
+  <div id="authButtons">
+    <button onclick="showLoginForm()" style="padding:6px 14px;background:transparent;border:1px solid #00ff88;color:#00ff88;font-family:monospace;font-size:11px;cursor:pointer;margin-right:6px">ログイン / 登録</button>
+  </div>
+</div>
+
+<!-- ログインフォーム -->
+<div id="loginForm" style="display:none;border:1px solid rgba(0,255,136,0.2);padding:20px;margin-bottom:14px;background:rgba(0,20,10,0.8)">
+  <div style="font-size:12px;color:#336644;letter-spacing:2px;margin-bottom:12px">メールアドレスでログイン / 新規登録</div>
+  <input type="email" id="emailInput" placeholder="メールアドレス" style="width:100%;background:#020d06;border:1px solid rgba(0,255,136,0.2);color:#00ff88;font-family:monospace;font-size:14px;padding:10px;outline:none;margin-bottom:8px;">
+  <input type="password" id="passwordInput" placeholder="パスワード（6文字以上）" style="width:100%;background:#020d06;border:1px solid rgba(0,255,136,0.2);color:#00ff88;font-family:monospace;font-size:14px;padding:10px;outline:none;margin-bottom:10px;">
+  <div style="display:flex;gap:8px;">
+    <button onclick="doLogin()" style="flex:1;padding:10px;background:transparent;border:1px solid #00ff88;color:#00ff88;font-family:monospace;font-size:12px;cursor:pointer;">ログイン</button>
+    <button onclick="doSignup()" style="flex:1;padding:10px;background:transparent;border:1px solid #336644;color:#336644;font-family:monospace;font-size:12px;cursor:pointer;">新規登録</button>
+    <button onclick="hideLoginForm()" style="padding:10px 14px;background:transparent;border:1px solid #1a3322;color:#336644;font-family:monospace;font-size:12px;cursor:pointer;">閉じる</button>
+  </div>
+  <div id="authMsg" style="font-size:11px;margin-top:8px;min-height:16px;color:#ffaa00"></div>
+</div>
 <div class="tabs">
   <button class="tab on" id="tab-btn-predict" onclick="showPage('predict')">🔮 TODAY予想</button>
   <button class="tab" id="tab-btn-n3log" onclick="showPage('n3log')">📋 N3ログ</button>
@@ -155,6 +176,106 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
 </div>
 
 <script>
+
+// ===== Supabase Auth =====
+var _supabaseClient = null;
+function getSupabaseClient() {
+  if (!_supabaseClient) {
+    _supabaseClient = supabase.createClient(
+      'https://lxxkevwbvniiysyezfoh.supabase.co',
+      'sb_publishable_EQtlO-IcObHQHmSv6cMfNQ_uwLE-lZT'
+    );
+  }
+  return _supabaseClient;
+}
+
+function showLoginForm() { document.getElementById('loginForm').style.display='block'; }
+function hideLoginForm() { document.getElementById('loginForm').style.display='none'; }
+
+async function doLogin() {
+  var email = document.getElementById('emailInput').value.trim();
+  var password = document.getElementById('passwordInput').value;
+  var msg = document.getElementById('authMsg');
+  if (!email || !password) { msg.textContent='メールアドレスとパスワードを入力してください'; return; }
+  msg.textContent='ログイン中...';
+  try {
+    var sb = getSupabaseClient();
+    var result = await sb.auth.signInWithPassword({ email: email, password: password });
+    if (result.error) { msg.textContent='エラー: ' + result.error.message; return; }
+    hideLoginForm();
+    await checkPremium(email);
+    runBoth();
+  } catch(e) { msg.textContent='エラー: ' + e.message; }
+}
+
+async function doSignup() {
+  var email = document.getElementById('emailInput').value.trim();
+  var password = document.getElementById('passwordInput').value;
+  var msg = document.getElementById('authMsg');
+  if (!email || !password) { msg.textContent='メールアドレスとパスワードを入力してください'; return; }
+  if (password.length < 6) { msg.textContent='パスワードは6文字以上にしてください'; return; }
+  msg.textContent='登録中...';
+  try {
+    var sb = getSupabaseClient();
+    var result = await sb.auth.signUp({ email: email, password: password });
+    if (result.error) { msg.textContent='エラー: ' + result.error.message; return; }
+    msg.style.color='#00ff88';
+    msg.textContent='登録完了！確認メールを送信しました。メールを確認してください。';
+  } catch(e) { msg.textContent='エラー: ' + e.message; }
+}
+
+async function doLogout() {
+  var sb = getSupabaseClient();
+  await sb.auth.signOut();
+  localStorage.removeItem('plan');
+  localStorage.removeItem('userEmail');
+  updateAuthUI(null);
+  runBoth();
+}
+
+async function checkPremium(email) {
+  try {
+    var sb = getSupabaseClient();
+    var result = await sb.from('premium_users').select('status').eq('email', email).single();
+    if (result.data && result.data.status === 'active') {
+      localStorage.setItem('plan', 'premium');
+      localStorage.setItem('userEmail', email);
+    } else {
+      localStorage.removeItem('plan');
+    }
+    updateAuthUI(email);
+  } catch(e) {
+    updateAuthUI(email);
+  }
+}
+
+function updateAuthUI(email) {
+  var status = document.getElementById('authStatus');
+  var buttons = document.getElementById('authButtons');
+  var prem = isPremium();
+  if (email) {
+    status.style.color = prem ? '#00ff88' : '#336644';
+    status.textContent = prem ? '🔓 有料プラン中: ' + email : '無料プラン: ' + email;
+    buttons.innerHTML = '<button onclick="doLogout()" style="padding:6px 14px;background:transparent;border:1px solid #336644;color:#336644;font-family:monospace;font-size:11px;cursor:pointer;">ログアウト</button>';
+  } else {
+    status.style.color = '#336644';
+    status.textContent = 'ログインすると有料プランを利用できます';
+    buttons.innerHTML = '<button onclick="showLoginForm()" style="padding:6px 14px;background:transparent;border:1px solid #00ff88;color:#00ff88;font-family:monospace;font-size:11px;cursor:pointer;">ログイン / 登録</button>';
+  }
+}
+
+// 起動時にセッション確認
+async function initAuth() {
+  try {
+    var sb = getSupabaseClient();
+    var session = await sb.auth.getSession();
+    if (session.data && session.data.session && session.data.session.user) {
+      var email = session.data.session.user.email;
+      await checkPremium(email);
+    }
+  } catch(e) {}
+}
+
 // ===== ストレージ =====
 var STRIPE_LINK = 'https://buy.stripe.com/9B63cwcfI9azbGOdER5wI01';
 function loadLog(t) { try { return JSON.parse(localStorage.getItem('ai_'+t))||[]; } catch(e) { return []; } }
