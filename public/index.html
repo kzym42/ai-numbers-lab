@@ -189,6 +189,9 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
 
 <script>
 
+// メールのパスワード再設定リンクから戻ってきたかを、ライブラリがURLを書き換える前に最優先で記録する
+var _isPasswordRecovery = (window.location.hash || '').indexOf('type=recovery') !== -1;
+
 // ===== Supabase Auth =====
 var _supabaseClient = null;
 function getSupabaseClient() {
@@ -325,8 +328,8 @@ function updateAuthUI(email) {
 async function initAuth() {
   try {
     var sb = getSupabaseClient();
-    // メールのリンクから戻ってきた場合の保険（ハッシュにrecoveryが残っていれば再設定画面を出す）
-    if ((window.location.hash || '').indexOf('type=recovery') !== -1) { showResetForm(); }
+    // メールのリンクから戻ってきた場合は再設定画面を出す（先頭で記録したフラグを使用）
+    if (_isPasswordRecovery) { showResetForm(); }
     var session = await sb.auth.getSession();
     if (session.data && session.data.session && session.data.session.user) {
       var email = session.data.session.user.email;
@@ -770,7 +773,12 @@ function renderLog(type) {
   listEl.innerHTML=html;
 }
 
-window.onload=function(){renderLog('n3');renderLog('n4');};
+window.onload=function(){
+  renderLog('n3');
+  renderLog('n4');
+  if (_isPasswordRecovery) { showResetForm(); }
+  initAuth();
+};
 </script>
 </body>
 </html>
