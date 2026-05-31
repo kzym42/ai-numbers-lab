@@ -102,7 +102,8 @@ input[type=file] { background: #020d06; border: 1px solid #1a4433; color: #33664
 <!-- パスワード再設定フォーム（メールのリンクから戻ってきた時に表示） -->
 <div id="resetForm" style="display:none;border:1px solid rgba(0,255,136,0.2);padding:20px;margin-bottom:14px;background:rgba(0,20,10,0.8)">
   <div style="font-size:12px;color:#00ff88;letter-spacing:2px;margin-bottom:12px">新しいパスワードの設定</div>
-  <input type="password" id="newPasswordInput" placeholder="新しいパスワード（6文字以上）" style="width:100%;background:#020d06;border:1px solid rgba(0,255,136,0.2);color:#00ff88;font-family:monospace;font-size:14px;padding:10px;outline:none;margin-bottom:10px;">
+  <input type="password" id="newPasswordInput" placeholder="新しいパスワード（6文字以上）" style="width:100%;background:#020d06;border:1px solid rgba(0,255,136,0.2);color:#00ff88;font-family:monospace;font-size:14px;padding:10px;outline:none;margin-bottom:8px;">
+  <input type="password" id="newPasswordInput2" placeholder="新しいパスワード（確認のためもう一度）" style="width:100%;background:#020d06;border:1px solid rgba(0,255,136,0.2);color:#00ff88;font-family:monospace;font-size:14px;padding:10px;outline:none;margin-bottom:10px;">
   <button onclick="doUpdatePassword()" style="width:100%;padding:10px;background:transparent;border:1px solid #00ff88;color:#00ff88;font-family:monospace;font-size:12px;cursor:pointer;">パスワードを保存</button>
   <div id="resetMsg" style="font-size:11px;margin-top:8px;min-height:16px;color:#ffaa00"></div>
 </div>
@@ -196,6 +197,10 @@ function getSupabaseClient() {
       'https://lxxkevwbvniiysyezfoh.supabase.co',
       'sb_publishable_EQtlO-IcObHQHmSv6cMfNQ_uwLE-lZT'
     );
+    // パスワード再設定リンクから戻ってきたら再設定画面を出す
+    _supabaseClient.auth.onAuthStateChange(function(event, session) {
+      if (event === 'PASSWORD_RECOVERY') { showResetForm(); }
+    });
   }
   return _supabaseClient;
 }
@@ -228,8 +233,10 @@ function showResetForm() {
 // 新しいパスワードを保存
 async function doUpdatePassword() {
   var pw = document.getElementById('newPasswordInput').value;
+  var pw2 = document.getElementById('newPasswordInput2').value;
   var msg = document.getElementById('resetMsg');
   if (!pw || pw.length < 6) { msg.style.color='#ffaa00'; msg.textContent='パスワードは6文字以上にしてください'; return; }
+  if (pw !== pw2) { msg.style.color='#ffaa00'; msg.textContent='パスワードが一致しません。もう一度確認してください'; return; }
   msg.style.color='#336644';
   msg.textContent='保存中...';
   try {
@@ -318,9 +325,8 @@ function updateAuthUI(email) {
 async function initAuth() {
   try {
     var sb = getSupabaseClient();
-    sb.auth.onAuthStateChange(function(event, session) {
-      if (event === 'PASSWORD_RECOVERY') { showResetForm(); }
-    });
+    // メールのリンクから戻ってきた場合の保険（ハッシュにrecoveryが残っていれば再設定画面を出す）
+    if ((window.location.hash || '').indexOf('type=recovery') !== -1) { showResetForm(); }
     var session = await sb.auth.getSession();
     if (session.data && session.data.session && session.data.session.user) {
       var email = session.data.session.user.email;
